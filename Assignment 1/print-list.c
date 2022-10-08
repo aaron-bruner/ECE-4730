@@ -11,7 +11,7 @@
 #include "functions.h"
 #define default_file "default-list-file.dat"
 
-void main(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
     FILE* fpt;
     int c;
@@ -27,7 +27,7 @@ void main(int argc, char* argv[])
             break;
         case '?':
             fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
-            return;
+            return 0;
         default:
             abort();
         }
@@ -46,5 +46,5 @@ void main(int argc, char* argv[])
 
     fclose(fpt);
 
-    return;
+    return 0;
 }

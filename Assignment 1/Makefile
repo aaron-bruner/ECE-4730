@@ -7,8 +7,7 @@
 #    Description: This makefile is designed to make our lives much simpler and reduce typing the same commands over and over
 
 CFLAGS = -g -Wall -Wstrict-prototypes  
-PROGS = runmain  
-OBJECTS = HW04_will_jones.o functions.o  
+PROGS = make-list print-list serial-add-list parallel-add-list
 LDFLAGS = -lm  
 CC = gcc  
 MCC = mpicc 
@@ -17,15 +16,22 @@ all: $(PROGS)
  
 make-list: make-list.o
 
-parallel-add-list: parallel-add-list.o MyMPI.c
-	$(MCC) $(LDFLAGS) -o $@ $+
-
 print-list: print-list.o
 
 serial-add-list: serial-add-list.o
- 
+
+parallel-add-list: parallel-add-list.c MyMPI.c
+	$(MCC) $(LDFLAGS) -o $@ $+
+
+pbs:
+	qsub pbs2.pbs
+	qsub pbs4.pbs
+	qsub pbs8.pbs
+	qsub pbs16.pbs
+	qsub pbs32.pbs
+
 clean:  
-	rm -f $(PROGS) *.o core*  
+	rm -f $(PROGS) *.o core* #ASG1_*
 
 # make-list.c  
 # MyMPI.c  

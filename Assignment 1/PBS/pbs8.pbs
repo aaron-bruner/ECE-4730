@@ -1,0 +1,7 @@
+#PBS -N ASG1_8P
+#PBS -l select=1:ncpus=2:mpiprocs=8:mem=2gb:interconnect=1g
+#PBS -l walltime=00:05:00
+#PBS -j oe
+module purge
+module add openmpi/4.1.3-gcc/9.5.0-ucx
+mpiexec ./parallel-add-list

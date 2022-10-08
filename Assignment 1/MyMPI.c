@@ -414,7 +414,7 @@ void read_row_striped_matrix (
    int          p;            /* Number of processes */
    void        *rptr;         /* Pointer into 'storage' */
    MPI_Status   status;       /* Result of receive */
-   //int          x;            /* Result of read */
+   int          x;            /* Result of read */
 
    MPI_Comm_size (comm, &p);
    MPI_Comm_rank (comm, &id);
@@ -459,12 +459,12 @@ void read_row_striped_matrix (
 
    if (id == (p-1)) {
       for (i = 0; i < p-1; i++) {
-         fread (*storage, datum_size,
+         x = fread (*storage, datum_size,
             BLOCK_SIZE(i,p,*m) * *n, infileptr);
          MPI_Send (*storage, BLOCK_SIZE(i,p,*m) * *n, dtype,
             i, DATA_MSG, comm);
       }
-      fread (*storage, datum_size, local_rows * *n,
+      x = fread (*storage, datum_size, local_rows * *n,
          infileptr);
       fclose (infileptr);
    } else
@@ -483,17 +483,17 @@ void read_block_vector (
     char        *s,      /* IN - File name */
     void       **v,      /* OUT - Subvector */
     MPI_Datatype dtype,  /* IN - Element type */
-    int         *n,      /* OUT - Vector length */
+    long long int         *n,      /* OUT - Vector length */
     MPI_Comm     comm)   /* IN - Communicator */
 {
    int        datum_size;   /* Bytes per element */
    int        i;
    FILE      *infileptr;    /* Input file pointer */
-   int        local_els;    /* Elements on this proc */
+   long long int        local_els;    /* Elements on this proc */
    MPI_Status status;       /* Result of receive */
    int        id;           /* Process rank */
    int        p;            /* Number of processes */
-   //int        x;            /* Result of read */
+   int        x;            /* Result of read */
 
    datum_size = get_size (dtype);
    MPI_Comm_size(comm, &p);
@@ -525,12 +525,12 @@ void read_block_vector (
    *v = my_malloc (id, local_els * datum_size);
    if (id == (p-1)) {
       for (i = 0; i < p-1; i++) {
-         fread (*v, datum_size, BLOCK_SIZE(i,p,*n),
+         x = fread (*v, datum_size, BLOCK_SIZE(i,p,*n),
             infileptr);
          MPI_Send (*v, BLOCK_SIZE(i,p,*n), dtype, i, DATA_MSG,
             comm);
       }
-      fread (*v, datum_size, BLOCK_SIZE(id,p,*n),
+      x = fread (*v, datum_size, BLOCK_SIZE(id,p,*n),
              infileptr);
       fclose (infileptr);
    } else {

@@ -1,0 +1,48 @@
+[12] Partial sum = 59
+[13] Partial sum = 80
+[14] Partial sum = 42
+[15] Partial sum = 78
+[ 0] Partial sum = 64
+[ 2] Partial sum = 57
+[ 7] Partial sum = 45
+[ 8] Partial sum = 41
+[ 9] Partial sum = 51
+[10] Partial sum = 64
+[11] Partial sum = 78
+[ 1] Partial sum = 55
+[ 3] Partial sum = 61
+[ 4] Partial sum = 63
+[ 5] Partial sum = 53
+[ 6] Partial sum = 82
+[ 3] Global sum  = 973
+[ 5] Global sum  = 973
+[ 2] Global sum  = 973
+[ 7] Global sum  = 973
+[ 9] Global sum  = 973
+[10] Global sum  = 973
+[13] Global sum  = 973
+[14] Global sum  = 973
+[ 6] Global sum  = 973
+[15] Global sum  = 973
+[11] Global sum  = 973
+[ 1] Global sum  = 973
+[ 8] Global sum  = 973
+[12] Global sum  = 973
+[ 0] Global sum  = 973
+[ 4] Global sum  = 973
+ 
+ 
++------------------------------------------+ 
+| PALMETTO CLUSTER PBS RESOURCES REQUESTED | 
++------------------------------------------+ 
+ 
+mem=4gb,walltime=00:05:00,ncpus=8
+ 
+ 
++-------------------------------------+ 
+| PALMETTO CLUSTER PBS RESOURCES USED | 
++-------------------------------------+ 
+ 
+cput=00:00:03,mem=101188kb,walltime=00:00:02,ncpus=8,cpupercent=0,vmem=0kb
+ 
+ 

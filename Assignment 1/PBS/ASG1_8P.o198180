@@ -1,0 +1,32 @@
+[ 0] Partial sum = 119
+[ 3] Partial sum = 127
+[ 7] Partial sum = 120
+[ 4] Partial sum = 92
+[ 6] Partial sum = 139
+[ 2] Partial sum = 116
+[ 5] Partial sum = 142
+[ 1] Partial sum = 118
+[ 4] Global sum  = 973
+[ 2] Global sum  = 973
+[ 1] Global sum  = 973
+[ 0] Global sum  = 973
+[ 6] Global sum  = 973
+[ 7] Global sum  = 973
+[ 3] Global sum  = 973
+[ 5] Global sum  = 973
+ 
+ 
++------------------------------------------+ 
+| PALMETTO CLUSTER PBS RESOURCES REQUESTED | 
++------------------------------------------+ 
+ 
+mem=2gb,walltime=00:05:00,ncpus=2
+ 
+ 
++-------------------------------------+ 
+| PALMETTO CLUSTER PBS RESOURCES USED | 
++-------------------------------------+ 
+ 
+cput=00:00:01,mem=47568kb,walltime=00:00:01,ncpus=2,cpupercent=0,vmem=0kb
+ 
+ 

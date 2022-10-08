@@ -1,0 +1,80 @@
+[ 0] Partial sum = 35
+[ 1] Partial sum = 29
+[ 2] Partial sum = 15
+[ 3] Partial sum = 40
+[ 4] Partial sum = 21
+[ 5] Partial sum = 36
+[ 6] Partial sum = 34
+[ 7] Partial sum = 27
+[ 8] Partial sum = 24
+[ 9] Partial sum = 39
+[10] Partial sum = 20
+[11] Partial sum = 33
+[12] Partial sum = 29
+[13] Partial sum = 53
+[14] Partial sum = 27
+[30] Partial sum = 40
+[17] Partial sum = 20
+[18] Partial sum = 44
+[20] Partial sum = 19
+[21] Partial sum = 45
+[22] Partial sum = 26
+[26] Partial sum = 34
+[27] Partial sum = 46
+[28] Partial sum = 15
+[31] Partial sum = 38
+[16] Partial sum = 21
+[23] Partial sum = 52
+[19] Partial sum = 7
+[24] Partial sum = 31
+[29] Partial sum = 27
+[25] Partial sum = 28
+[15] Partial sum = 18
+[10] Global sum  = 973
+[26] Global sum  = 973
+[ 2] Global sum  = 973
+[ 3] Global sum  = 973
+[ 4] Global sum  = 973
+[ 5] Global sum  = 973
+[ 6] Global sum  = 973
+[ 7] Global sum  = 973
+[ 0] Global sum  = 973
+[ 1] Global sum  = 973
+[14] Global sum  = 973
+[30] Global sum  = 973
+[13] Global sum  = 973
+[22] Global sum  = 973
+[15] Global sum  = 973
+[27] Global sum  = 973
+[11] Global sum  = 973
+[24] Global sum  = 973
+[ 8] Global sum  = 973
+[31] Global sum  = 973
+[12] Global sum  = 973
+[23] Global sum  = 973
+[ 9] Global sum  = 973
+[18] Global sum  = 973
+[20] Global sum  = 973
+[21] Global sum  = 973
+[16] Global sum  = 973
+[19] Global sum  = 973
+[29] Global sum  = 973
+[28] Global sum  = 973
+[25] Global sum  = 973
+[17] Global sum  = 973
+ 
+ 
++------------------------------------------+ 
+| PALMETTO CLUSTER PBS RESOURCES REQUESTED | 
++------------------------------------------+ 
+ 
+mem=8gb,walltime=00:05:00,ncpus=16
+ 
+ 
++-------------------------------------+ 
+| PALMETTO CLUSTER PBS RESOURCES USED | 
++-------------------------------------+ 
+ 
+cput=00:00:03,mem=49352kb,walltime=00:00:03,ncpus=16,cpupercent=0,vmem=630140kb
+ 
+ 

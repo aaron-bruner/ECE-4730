@@ -17,7 +17,7 @@
 #define default_file "default-list-file.dat"
 #define default_num 100;
 
-void main(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
     FILE* fpt;
     int randInt, c, n = 100; // Default n to 100
@@ -36,7 +36,7 @@ void main(int argc, char* argv[])
             break;
         case '?':
             fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
-            return;
+            return 0;
         default:
             abort();
         }
@@ -63,5 +63,5 @@ void main(int argc, char* argv[])
     printf("Number of integers written: %d\n", c);
     fclose(fpt);
 
-	return;
+	return 0;
 }
