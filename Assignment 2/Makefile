@@ -31,4 +31,4 @@ pbs:
 	qsub pbs32.pbs
 
 clean:  
-	rm -f $(PROGS) *.o core*
+	rm -f $(PROGS) *.o core* *.dat

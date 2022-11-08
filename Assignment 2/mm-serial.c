@@ -1,59 +1,156 @@
-/*  ECE-4730     : Introduction to Parallel Systems
-    File         : serial-add-list.c
-    Assignment 1 : Fall 2022
+﻿/*  ECE-4730     : Introduction to Parallel Systems
+    File         : mm-serial.c
+    Assignment 2 : Fall 2022
     ajbrune
     C16480080
 
-    Description: This serial executable will open the specified input file, and will determine the sum of all 
-                 the numbers in it (excluding the first, which indicates how many there are). It will assume 
-                 the file format is equal to that of above. It should also have a default input file should the 
-                 -i not be specified. This default should be the same as specified above. This is essentially 
-                 the non-parallel version of the parallel one described further down in this assignment. 
+    Description: Reads 2 input matrix files and computes the product of the matrix in input_file1 with the matrix
+                 in input_file2 (remember in matrix multiply, order matters), and then writes resulting product into
+                 the output file. The columns of input_file1 and the rows of input_file2 must be equal, otherwise
+                 print an error and stop. This may be implemented using the traditional algorithm or a blockwise
+                 algorithm.
+
+    Example Usage: mm-serial input_file1 input_file2 output_file
  */
 
 #include "functions.h"
 
-#define default_file "default-list-file.dat"
-
 int main(int argc, char* argv[])
 {
     FILE* fpt;
-    int c, n, sum = 0;
-    short x;
-    char* i = NULL;
+    char* matrixOneFile = NULL, * matrixTwoFile = NULL, * matrixOutputFile = NULL;
+    int matrixOneR = 0, matrixOneC = 0, matrixTwoR = 0, matrixTwoC = 0;
+    double** matrixOne, ** matrixTwo, ** product, x = 0.0;
 
-    // Handling multiple CLA
-    while ((c = getopt(argc, argv, "i:")) != -1)
+#pragma region Handle CLA
+    // Handle CLA (Not supporting no provided file names since the files may not exist)
+    if (argc == 4)
     {
-        switch (c)
+        matrixOneFile = strdup(argv[1]);
+        matrixTwoFile = strdup(argv[2]);
+        matrixOutputFile = strdup(argv[3]);
+    }
+    else
+    {
+        fprintf(stdout, "Incorrect number of arguments.\nUsage: mm-serial (input_file1) (input_file2) (output_file)\n");
+        abort();
+    }
+#pragma endregion
+
+#pragma region Read Matrix Data
+    /*━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━*/
+    // Open matrix one data and read it into matrixOne
+    /*━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━*/
+    fpt = fopen(matrixOneFile, "r"); fpt == NULL ? (fprintf(stderr, "Failed to open file %s\n", matrixOneFile), exit(0)) : fpt;
+    // Read in first two integers as row and column
+    fread(&matrixOneR, 1, sizeof(int), fpt);
+    fread(&matrixOneC, 1, sizeof(int), fpt);
+    matrixOne = (double**)malloc(matrixOneR * sizeof(double*));
+    for (int i = 0; i < matrixOneR; i++)
+    {
+        matrixOne[i] = (double*)malloc(matrixOneC * sizeof(double));
+    }
+
+    // Read in all of the data
+    for (int a = 0; a < matrixOneR; a++)
+    {
+        for (int b = 0; b < matrixOneC; b++)
         {
-        case 'i':
-            i = strdup(optarg);
-            break;
-        case '?':
-            fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
-            return 0;
-        default:
-            abort();
+            fread(&x, 1, sizeof(double), fpt);
+            matrixOne[a][b] = x;
         }
     }
 
-    // If no CLA is provided we use the default file
-    i == NULL ? (i = default_file) : i;
-
-    fpt = fopen(i, "r"); fpt == NULL ? (fprintf(stderr, "Failed to open file %s\n", i), exit(0)) : fpt;
-
-    // Number of integers being read
-    fread(&n, 1, sizeof(int), fpt);
-
-    // Read n number of random integers
-    while (fread(&x, 1, sizeof(short), fpt) != 0)
-    {
-        sum += x;
-    }
-    
     fclose(fpt);
-    printf("Sum = %d\n", sum);
+
+    /*━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━*/
+    // Open matrix two data and read it into matrixTwo
+    /*━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━*/
+    fpt = fopen(matrixTwoFile, "r"); fpt == NULL ? (fprintf(stderr, "Failed to open file %s\n", matrixTwoFile), exit(0)) : fpt;
+    // Read in first two integers as row and column
+    fread(&matrixTwoR, 1, sizeof(int), fpt);
+    fread(&matrixTwoC, 1, sizeof(int), fpt);
+    matrixTwo = (double**)malloc(matrixOneR * sizeof(double*));
+    for (int i = 0; i < matrixTwoR; i++)
+    {
+        matrixTwo[i] = (double*)malloc(matrixTwoC * sizeof(double));
+    }
+
+    // Read in all of the data
+    for (int a = 0; a < matrixTwoR; a++)
+    {
+        for (int b = 0; b < matrixTwoC; b++)
+        {
+            fread(&x, 1, sizeof(double), fpt);
+            matrixTwo[a][b] = x;
+        }
+    }
+
+    fclose(fpt);
+#pragma endregion
+    
+#pragma region Data Validation
+
+    if (matrixOneC != matrixTwoR)
+    {
+        fprintf(stderr, "Number of columns in matrix one (%d) does not equal number of rows in matrix two (%d)\n", matrixOneC, matrixTwoR);
+        abort();
+    }
+
+#pragma endregion
+
+#pragma region Multiply Matrix Together
+
+    // Allocate space in the product array
+    product = (double *)malloc(matrixOneR * sizeof(double *));
+    for (int a = 0; a < matrixOneR; a++)
+    {
+        product[a] = (double *)malloc(matrixTwoC * sizeof(double));
+    }
+
+    // Initialize result matrix to 0s
+    for (int a = 0; a < matrixOneR; a++)
+    {
+        for (int b = 0; b < matrixTwoC; b++)
+        {
+            product[a][b] = 0;
+        }
+    }
+
+    // Multiplying first and second matrices and storing it in result
+    for (int a = 0; a < matrixOneR; ++a) 
+    {
+        for (int b = 0; b < matrixTwoC; ++b) 
+        {
+            for (int c = 0; c < matrixOneC; ++c) 
+            {
+                product[a][b] += matrixOne[a][c] * matrixTwo[c][b];
+            }
+        }
+    }
+
+#pragma endregion
+
+#pragma region Output to File
+
+    fpt = fopen(matrixOutputFile, "w"); fpt == NULL ? (fprintf(stderr, "Failed to open file %s\n", matrixOutputFile), exit(0)) : fpt;
+
+    // Number of integers being written
+    fwrite(&matrixOneR, 1, sizeof(int), fpt);
+    fwrite(&matrixTwoC, 1, sizeof(int), fpt);
+
+    // Write n number of random integers
+    for (int a = 0; a < matrixOneR; a++)
+    {
+        for (int b = 0; b < matrixTwoC; b++)
+        {
+            fwrite(&product[a][b], sizeof(double), 1, fpt);
+        }
+    }
+
+    fclose(fpt);
+
+#pragma endregion
 
     return 0;
 }
