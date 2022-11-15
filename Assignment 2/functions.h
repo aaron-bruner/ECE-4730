@@ -7,6 +7,9 @@
     Description: This is the header file for all of our custom files.
  */
 
+// For mpi.h
+#include <mpi.h>
+#include "MyMPI.h"
 // From MyMPI.c
 #include <string.h>
 #include <stdio.h>
@@ -15,6 +18,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include <unistd.h>
+#include <math.h>
 
 /*----------------*/
 /* make-matrix.c  */
@@ -29,3 +33,14 @@
 /* print-matrix.c */
 /*----------------*/
 #define PRINT_HORIZONTAL_LINE(x) for (int __Z__ = 0; __Z__ < x; __Z__++) fprintf(stdout, "━");
+
+/*----------------*/
+/*  mm-serial.c   */
+/*----------------*/
+double** readMatrix(char* file, int *row, int *col);
+
+/*----------------*/
+/*  mm-parallel.c */
+/*----------------*/
+#define SQR(x) ((x)*(x))
+int PerfectSquare(int n);

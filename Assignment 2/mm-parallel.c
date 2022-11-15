@@ -1,136 +1,161 @@
-/*  ECE-4730     : Introduction to Parallel Systems
-    File         : parallel-add-list.c
-    Assignment 1 : Fall 2022
-    ajbrune
-    C16480080
+﻿ /*  ECE-4730     : Introduction to Parallel Systems
+     File         : mm-parallel.c
+     Assignment 2 : Fall 2022
+     ajbrune
+     C16480080
 
-    Description: This is the parallel version of the list adder. Defaults as specified above. As mentioned
-                 above, it will use block decomposition. This function must be executed by all tasks in MPI_COMM_WORLD and computes the
-                 sum of all the my_value's and returns the sum of all the tasks individual 'my_value's via
-                 the result pointer. (All processors must know the global sum after the call returns)
-                 Note, this is similar to MPI_Allreduce with addition does, except I only expect you
-                 to deal with scalar local my_values (i.e. not the reductions of arrays of values).
-                 Note, for convenience, you may assume that the number of processors you run this
-                 program is a 'power of 2', i.e. 2, 4, 8, 16, etc. You must put in some error checking code
-                 to see ensure your code only executes if the number of processors matches this
-                 assumption and if not, prints a message and immediately exits.
- */
+     Description: Reads 2 input matrix files and computes the product of the matrix in input_file1 with the matrix
+                  in input_file2 (remember in matrix multiply, order matters), and then writes resulting product into
+                  the output file. This method will implement the Cannon’s matrix multiply discussed in the book
+                  and in class. You may require the number of rows and columns of the matrices to be evenly
+                  divided by the square of the number of processors (which should be square). You must use an
+                  MPI 2D Cartesian topology to manage communication between tasks. Your 2D matrix should be
+                  represented in memory as presented in class and in the book with an array of doubles and an array
+                  of pointers to double.
+
+     Example Usage: mpirun -np __ mm-parallel input_file1 input_file2 output_file
+*/
 
 #include "functions.h"
-#define default_file "default-list-file.dat"
-
-// MPI Headers
-#include <mpi.h>
-#include "MyMPI.h"
-
-void global_sum(int* result, int rank, int size, long int my_value);
 
 int main(int argc, char* argv[])
 {
     FILE* fpt;
-    int c, rank, size, elements, sum = 0, globalSum = 0;
-    char* i = NULL;
-    void* out_vector;
+    char* matrixOneFile = NULL, * matrixTwoFile = NULL, * matrixOutputFile = NULL;
+    int matrixOneR = 0, matrixOneC = 0, matrixTwoR = 0, matrixTwoC = 0, size = 0, rank = 0;
+    double** matrixOne, ** matrixTwo, ** product;
 
-    // Handling multiple CLA
-    while ((c = getopt(argc, argv, "i:")) != -1)
+#pragma region Handle CLA
+    // Handle CLA (Not supporting no provided file names since predefined files may not exist)
+    if (argc == 4)
     {
-        switch (c)
-        {
-        case 'i':
-            i = strdup(optarg);
-            break;
-        case '?':
-            fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
-            return 0;
-        default:
-            abort();
-        }
-    }
-
-    // If no CLA is provided we use the default file
-    i == NULL ? (i = default_file) : i;
-
-    // Creation of parallel processes
-    MPI_Init(&argc, &argv);
-    
-    // Process ID and number of processes
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-    // Validate that we have a power of 2 number of processors
-    if ((size != 0) && ((size & (size - 1)) == 0))
-    {
-        // Is a power of 2
+        matrixOneFile = strdup(argv[1]);
+        matrixTwoFile = strdup(argv[2]);
+        matrixOutputFile = strdup(argv[3]);
     }
     else
     {
-        // Is not a power of 2
-        rank == 0 ? fprintf(stderr, "Error: The number of processors must be a power of 2\n") : rank;
+        fprintf(stdout, "Incorrect number of arguments.\nUsage: mpirun -np __ mm-parallel (input_file1) (input_file2) (output_file)\n");
+        abort();
+    }
+#pragma endregion
 
-        MPI_Finalize();
-        exit(0);
+#pragma region Read Matrix Data
+    /*━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━*/
+    // Open matrix one data and read it into matrixOne
+    /*━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━*/
+    matrixOne = readMatrix(matrixOneFile, &matrixOneR, &matrixOneC);
+
+    /*━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━*/
+    // Open matrix two data and read it into matrixTwo
+    /*━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━*/
+    matrixTwo = readMatrix(matrixTwoFile, &matrixTwoR, &matrixTwoC);
+#pragma endregion
+
+#pragma region Data Validation
+
+    if (matrixOneC != matrixTwoR)
+    {
+        fprintf(stderr, "Number of columns in matrix one (%d) does not equal number of rows in matrix two (%d)\n", matrixOneC, matrixTwoR);
+        abort();
     }
 
-    // Block Decomposition
-    //void read_block_vector(char *, void **, MPI_Datatype, int*, MPI_Comm);
-    read_block_vector(i, &out_vector, MPI_INT, (long long int*)(&elements), MPI_COMM_WORLD);
+#pragma endregion
 
-    // Calculate partial sum
-    for (c = 0; c < BLOCK_SIZE(rank, size, elements); c++) sum += ((int*)out_vector)[c];
-    
-    // Validate decomposition by printing out partial sums for each processor
-    fprintf(stdout, "[%2d] Partial sum = %d\n", rank, sum);
+#pragma region Setup MPI
 
-    // Get the global sum by having each processor send it's sum to the root
-    global_sum(&globalSum, rank, size, sum);
+    MPI_Init(&argc, &argv);
 
-    // Make it *pretty* by waiting for all processes to return from global_sum() to print the global sum value
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    // Have the root display total value
-    fprintf(stdout, "[%2d] Global sum  = %d\n", rank, globalSum);
+    // Ensure that the number of processors is a square
+    if (!PerfectSquare(size))
+    {
+        fprintf(stdout, "Error: The number of processors (%d) is not a perfect square.\n", size);
+        MPI_Finalize();
+        abort();
+    }
 
-    // Clear all MPI state before process exits
-    MPI_Finalize();
+#pragma endregion
+
+#pragma region Output to File
+
+    fpt = fopen(matrixOutputFile, "w"); fpt == NULL ? (fprintf(stderr, "Failed to open file %s\n", matrixOutputFile), exit(0)) : fpt;
+
+    // Number of integers being written
+    fwrite(&matrixOneR, 1, sizeof(int), fpt);
+    fwrite(&matrixTwoC, 1, sizeof(int), fpt);
+
+    // Write n number of random integers
+    for (int a = 0; a < matrixOneR; a++)
+    {
+        for (int b = 0; b < matrixTwoC; b++)
+        {
+            fwrite(&product[a][b], sizeof(double), 1, fpt);
+        }
+    }
+
+    fclose(fpt);
+
+#pragma endregion
 
     return 0;
 }
 
-// The below link is a good discussion regarding sending and receiving in MPI
-// https://stackoverflow.com/questions/39967886/how-to-send-receive-in-mpi-using-all-processors
-void global_sum(int *result, int rank, int size, long int my_value)
+/// <summary>
+/// Helper function to read in matrix data from specified file. This is to simplify repeated methods.
+/// </summary>
+/// <param name="file">File name for matrix data</param>
+/// <param name="row">Number of rows in matrix data file (param 1)</param>
+/// <param name="col">Number of cols in matrix data file (param 2)</param>
+/// <returns></returns>
+double** readMatrix(char* file, int* row, int* col)
 {
-    MPI_Status status;
-
-    if (rank == size-1) // Root process
+    double buffer = 0.0;
+    FILE* fpt = fopen(file, "r"); fpt == NULL ? (fprintf(stderr, "Failed to open file %s\n", file), exit(0)) : fpt;
+    // Read in first two integers as row and column
+    fread(&(*row), 1, sizeof(int), fpt);
+    fread(&(*col), 1, sizeof(int), fpt);
+    double** data = (double**)malloc((*row) * sizeof(double*));
+    for (int i = 0; i < (*row); i++)
     {
-        // Root already calculated it's partial value so we just add that to the result
-        *result += my_value;
+        data[i] = (double*)malloc((*col) * sizeof(double));
+    }
 
-        // Total up partial sums as they come in
-        for (int i = 0; i < size-1; i++)
+    // Read in all of the data
+    for (int a = 0; a < (*row); a++)
+    {
+        for (int b = 0; b < (*col); b++)
         {
-            //int MPI_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag,
-            //              MPI_Comm comm, MPI_Status* status)
-            MPI_Recv(&my_value, 1, MPI_DOUBLE, i , DATA_MSG, MPI_COMM_WORLD, &status);
-            *result += my_value;
-        }
-
-        // All processes must know the global sum before we display the result
-        for (int i = 0; i < size-1; i++)
-        {
-            //int MPI_Send(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, 
-            //              MPI_Comm comm)
-            MPI_Send(result, 1, MPI_DOUBLE, i, DATA_MSG, MPI_COMM_WORLD);
+            fread(&buffer, 1, sizeof(double), fpt);
+            data[a][b] = buffer;
         }
     }
-    else // All processors but root
-    {
-        // Tell root our partial sum value
-        MPI_Send(&my_value, 1, MPI_DOUBLE, size-1, DATA_MSG, MPI_COMM_WORLD);
 
-        // Wait for root to tell us the global sum
-        MPI_Recv(result, 1, MPI_DOUBLE, size-1, DATA_MSG, MPI_COMM_WORLD, &status);
+    fclose(fpt);
+
+    return data;
+}
+
+/// <summary>
+/// Perfect Square algorithm discussed here:
+/// https://www.johndcook.com/blog/2008/11/17/fast-way-to-test-whether-a-number-is-a-square/
+/// </summary>
+/// <param name="n">Number to check if it is a perfect square</param>
+/// <returns>0 (Not Perfect) Or 1 (Perfect)</returns>
+int PerfectSquare(int n)
+{
+    int h = n & 0xF; // last hexadecimal "digit"
+    if (h > 9)
+        return 0; // return immediately in 6 cases out of 16.
+
+    // Take advantage of Boolean short-circuit evaluation
+    if (h != 2 && h != 3 && h != 5 && h != 6 && h != 7 && h != 8)
+    {
+        // take square root if you must
+        int t = (int)floor(sqrt((double)n) + 0.5);
+        return t * t == n;
     }
+    return 0;
 }

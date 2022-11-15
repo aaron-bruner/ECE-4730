@@ -6,7 +6,7 @@
 #
 #    Description: This makefile is designed to make our lives much simpler and reduce typing the same commands over and over
 
-CFLAGS = -g -Wall -Wstrict-prototypes  
+CFLAGS = -g -Wall -Wstrict-prototypes -Wno-unknown-pragmas
 PROGS = make-matrix print-matrix mm-serial mm-parallel
 LDFLAGS = -lm  
 CC = gcc  
@@ -21,7 +21,7 @@ print-matrix: print-matrix.o
 mm-serial: mm-serial.o
 
 mm-parallel: mm-parallel.c MyMPI.c
-	$(MCC) $(LDFLAGS) -o $@ $+
+	$(MCC) -o $@ $+ $(LDFLAGS)
 
 pbs:
 	qsub pbs2.pbs

@@ -10,6 +10,9 @@
                  print an error and stop. This may be implemented using the traditional algorithm or a blockwise
                  algorithm.
 
+                 The below link talks about Matrix Multiplication in C which is what this code is based off of.
+                 https://www.javatpoint.com/matrix-multiplication-in-c
+
     Example Usage: mm-serial input_file1 input_file2 output_file
  */
 
@@ -20,10 +23,10 @@ int main(int argc, char* argv[])
     FILE* fpt;
     char* matrixOneFile = NULL, * matrixTwoFile = NULL, * matrixOutputFile = NULL;
     int matrixOneR = 0, matrixOneC = 0, matrixTwoR = 0, matrixTwoC = 0;
-    double** matrixOne, ** matrixTwo, ** product, x = 0.0;
+    double** matrixOne, ** matrixTwo, ** product;
 
 #pragma region Handle CLA
-    // Handle CLA (Not supporting no provided file names since the files may not exist)
+    // Handle CLA (Not supporting no provided file names since predefined files may not exist)
     if (argc == 4)
     {
         matrixOneFile = strdup(argv[1]);
@@ -41,52 +44,12 @@ int main(int argc, char* argv[])
     /*━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━*/
     // Open matrix one data and read it into matrixOne
     /*━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━*/
-    fpt = fopen(matrixOneFile, "r"); fpt == NULL ? (fprintf(stderr, "Failed to open file %s\n", matrixOneFile), exit(0)) : fpt;
-    // Read in first two integers as row and column
-    fread(&matrixOneR, 1, sizeof(int), fpt);
-    fread(&matrixOneC, 1, sizeof(int), fpt);
-    matrixOne = (double**)malloc(matrixOneR * sizeof(double*));
-    for (int i = 0; i < matrixOneR; i++)
-    {
-        matrixOne[i] = (double*)malloc(matrixOneC * sizeof(double));
-    }
-
-    // Read in all of the data
-    for (int a = 0; a < matrixOneR; a++)
-    {
-        for (int b = 0; b < matrixOneC; b++)
-        {
-            fread(&x, 1, sizeof(double), fpt);
-            matrixOne[a][b] = x;
-        }
-    }
-
-    fclose(fpt);
+    matrixOne = readMatrix(matrixOneFile, &matrixOneR, &matrixOneC);
 
     /*━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━*/
     // Open matrix two data and read it into matrixTwo
     /*━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━*/
-    fpt = fopen(matrixTwoFile, "r"); fpt == NULL ? (fprintf(stderr, "Failed to open file %s\n", matrixTwoFile), exit(0)) : fpt;
-    // Read in first two integers as row and column
-    fread(&matrixTwoR, 1, sizeof(int), fpt);
-    fread(&matrixTwoC, 1, sizeof(int), fpt);
-    matrixTwo = (double**)malloc(matrixOneR * sizeof(double*));
-    for (int i = 0; i < matrixTwoR; i++)
-    {
-        matrixTwo[i] = (double*)malloc(matrixTwoC * sizeof(double));
-    }
-
-    // Read in all of the data
-    for (int a = 0; a < matrixTwoR; a++)
-    {
-        for (int b = 0; b < matrixTwoC; b++)
-        {
-            fread(&x, 1, sizeof(double), fpt);
-            matrixTwo[a][b] = x;
-        }
-    }
-
-    fclose(fpt);
+    matrixTwo = readMatrix(matrixTwoFile, &matrixTwoR, &matrixTwoC);
 #pragma endregion
     
 #pragma region Data Validation
@@ -102,7 +65,7 @@ int main(int argc, char* argv[])
 #pragma region Multiply Matrix Together
 
     // Allocate space in the product array
-    product = (double *)malloc(matrixOneR * sizeof(double *));
+    product = (double **)malloc(matrixOneR * sizeof(double *));
     for (int a = 0; a < matrixOneR; a++)
     {
         product[a] = (double *)malloc(matrixTwoC * sizeof(double));
@@ -153,4 +116,39 @@ int main(int argc, char* argv[])
 #pragma endregion
 
     return 0;
+}
+
+/// <summary>
+/// Helper function to read in matrix data from specified file. This is to simplify repeated methods.
+/// </summary>
+/// <param name="file">File name for matrix data</param>
+/// <param name="row">Number of rows in matrix data file (param 1)</param>
+/// <param name="col">Number of cols in matrix data file (param 2)</param>
+/// <returns></returns>
+double** readMatrix(char* file, int *row, int *col)
+{
+    double buffer = 0.0;
+    FILE *fpt = fopen(file, "r"); fpt == NULL ? (fprintf(stderr, "Failed to open file %s\n", file), exit(0)) : fpt;
+    // Read in first two integers as row and column
+    fread(&(*row), 1, sizeof(int), fpt);
+    fread(&(*col), 1, sizeof(int), fpt);
+    double** data = (double**)malloc((*row) * sizeof(double*));
+    for (int i = 0; i < (*row); i++)
+    {
+        data[i] = (double*)malloc((*col) * sizeof(double));
+    }
+
+    // Read in all of the data
+    for (int a = 0; a < (*row); a++)
+    {
+        for (int b = 0; b < (*col); b++)
+        {
+            fread(&buffer, 1, sizeof(double), fpt);
+            data[a][b] = buffer;
+        }
+    }
+
+    fclose(fpt);
+
+    return data;
 }
