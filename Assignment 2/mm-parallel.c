@@ -20,12 +20,16 @@
 
 int main(int argc, char* argv[])
 {
-    FILE* fpt;
     char* matrixOneFile = NULL, * matrixTwoFile = NULL, * matrixOutputFile = NULL;
-    int matrixOneR = 0, matrixOneC = 0, matrixTwoR = 0, matrixTwoC = 0, size = 0, rank = 0;
-    double** matrixOne, ** matrixTwo, ** product;
+	int rank, size;
+	int matrixOneCols, matrixOneRows, matrixTwoCols, matrixTwoRows, productRows, productCols, i, right, left, currentRow;
+	double** matrixOne, * matrixOneStorage;
+	double** matrixTwo, * matrixTwoStorage;
+	double* product, * outputMatrix;
+	MPI_Status status;
+	FILE* fpt;
 
-#pragma region Handle CLA
+	/*==================================================================================================================================================*/
     // Handle CLA (Not supporting no provided file names since predefined files may not exist)
     if (argc == 4)
     {
@@ -36,106 +40,103 @@ int main(int argc, char* argv[])
     else
     {
         fprintf(stdout, "Incorrect number of arguments.\nUsage: mpirun -np __ mm-parallel (input_file1) (input_file2) (output_file)\n");
-        abort();
-    }
-#pragma endregion
-
-#pragma region Read Matrix Data
-    /*━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━*/
-    // Open matrix one data and read it into matrixOne
-    /*━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━*/
-    matrixOne = readMatrix(matrixOneFile, &matrixOneR, &matrixOneC);
-
-    /*━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━*/
-    // Open matrix two data and read it into matrixTwo
-    /*━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━*/
-    matrixTwo = readMatrix(matrixTwoFile, &matrixTwoR, &matrixTwoC);
-#pragma endregion
-
-#pragma region Data Validation
-
-    if (matrixOneC != matrixTwoR)
-    {
-        fprintf(stderr, "Number of columns in matrix one (%d) does not equal number of rows in matrix two (%d)\n", matrixOneC, matrixTwoR);
-        abort();
+        return 0;
     }
 
-#pragma endregion
+	/*==================================================================================================================================================*/
+	// Setup MPI and read in matrix data
+	MPI_Init(&argc, &argv);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-#pragma region Setup MPI
+	// Ensure we have a square number of processors
+	if (!PerfectSquare(size) || size == 1)
+	{
+		if (rank == ROOT) fprintf(stdout, "Invalid number of processors (%d)...\n", size);
+		return 0;
+	}
 
-    MPI_Init(&argc, &argv);
+	right = rank + 1 == size ? 0 : rank + 1; // Find rank to the right
+	left = rank - 1 < 0 ? size-1 : rank - 1; // Find rank to the left
+    
+	read_row_striped_matrix(matrixOneFile				/* IN - File name */
+							,(void***)&matrixOne		/* OUT - 2D submatrix indices */
+							,(void**)&matrixOneStorage	/* OUT - Submatrix stored here */
+							,MPI_DOUBLE					/* IN - Matrix element type */
+							,&matrixOneRows				/* OUT - Matrix rows */
+							,&matrixOneCols				/* OUT - Matrix cols */
+							,MPI_COMM_WORLD);			/* IN - Communicator */
+	read_row_striped_matrix(matrixTwoFile				/* IN - File name */
+							,(void***)&matrixTwo		/* OUT - 2D submatrix indices */
+							,(void**)&matrixTwoStorage	/* OUT - Submatrix stored here */
+							,MPI_DOUBLE					/* IN - Matrix element type */
+							,&matrixTwoRows				/* OUT - Matrix rows */
+							,&matrixTwoCols				/* OUT - Matrix cols */
+							,MPI_COMM_WORLD);			/* IN - Communicator */
+	/*==================================================================================================================================================*/
 
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	productRows = BLOCK_SIZE(rank, size, matrixOneRows);	// Number of rows per processor based on matrix one
+	productCols = matrixTwoCols;							// Number of columns in product
+	currentRow = BLOCK_LOW(rank, size, matrixOneRows);		// What row each processor starts on
+	product = (double*)calloc(productRows * productCols * sizeof(MPI_DOUBLE), sizeof(MPI_DOUBLE)); // Allocate space for product per processor
 
-    // Ensure that the number of processors is a square
-    if (!PerfectSquare(size))
-    {
-        fprintf(stdout, "Error: The number of processors (%d) is not a perfect square.\n", size);
-        MPI_Finalize();
-        abort();
-    }
+	for (int rover = 0; rover < size; rover++) // For each processor calculate the partial product
+	{
+		for (int processRow = 0; processRow < productRows; processRow++) // Number of rows for processor to process
+		{
+			/// We need to get the 2D coordinates based on the processor and what the last row we processed was
+			/// Using a 3x3 we can follow this logic:
+			/// 
+			/// processRow (x) = Number of rows per processor ( for a 4x4 matrix with 4 processors this would go to 1 | for 16x16 with 4 processors this would go to 4 )
+			/// r = Current row
+			/// c = Current Column
+			/// 
+			/// x=0 r=0 c=0    x=0 r=0 c=1    x=0 r=0 c=2    x=0 r=1 c=0    x=0 r=1 c=1 
+			///  X   2   3      1   X   3      1   2   X      1   2   3      1   2   3  
+			///  4   5   6  =>  4   5   6  =>  4   5   6  =>  X   5   6  =>  4   X   6  . . .
+			///  7   8   9      7   8   9      7   8   9      7   8   9      7   8   9  
+			/// 
+			/// x=1 r=1 c=0    x=1 r=1 c=1    x=1 r=1 c=2    x=1 r=2 c=0    x=1 r=2 c=1 
+			///  1   2   3      1   2   3      1   2   3      1   2   3      1   2   3  
+			///  X   5   6  =>  4   X   6  =>  4   5   X  =>  4   5   6  =>  4   5   6  . . .
+			///  7   8   9      7   8   9      7   8   9      X   8   9      7   X   9  
+			/// Following this algorithm we reference every values for each matrix and evenly distribute the rows among processors
+			for (int r = processRow * productCols + currentRow; r < processRow * productCols + (currentRow + productRows); r++) // Product Rows - Changes per process
+				for (int c = (r % productRows) * productCols; c < (r % productRows) * productCols + productCols; c++)			// Product Cols - Changes per process
+					product[processRow * productCols + (c % productCols)] += matrixOneStorage[r] * matrixTwoStorage[c];
+		}
+		MPI_Sendrecv(matrixTwoStorage, productRows * productCols, MPI_DOUBLE, left, 1,							/* SEND */
+					matrixTwoStorage, productRows * productCols, MPI_DOUBLE, right, 1, MPI_COMM_WORLD, &status);/* RECV */
+		currentRow = (currentRow + productRows) % matrixOneRows;
+	}
 
-#pragma endregion
+	/*==================================================================================================================================================*/
+	// Output result to file (only if ROOT)
+	outputMatrix = (double*)malloc(matrixOneRows * matrixTwoCols * sizeof(double));
+	MPI_Gather(product, (productRows * productCols), MPI_DOUBLE, rank == ROOT ? outputMatrix : NULL, (productRows * productCols), MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-#pragma region Output to File
+	if (rank == ROOT)
+	{
+		fpt = fopen(matrixOutputFile, "w");
+		fwrite(&matrixOneRows, sizeof(int), 1, fpt);
+		fwrite(&matrixTwoCols, sizeof(int), 1, fpt);
+		fwrite(outputMatrix, sizeof(double), matrixOneRows * matrixTwoCols, fpt);
+		fclose(fpt);
+	}
+	/*==================================================================================================================================================*/
+	// Free memory
+	free(product);
+	free(outputMatrix);
+	free(matrixOne);
+	free(matrixOneStorage);
+	free(matrixTwo);
+	free(matrixTwoStorage);
 
-    fpt = fopen(matrixOutputFile, "w"); fpt == NULL ? (fprintf(stderr, "Failed to open file %s\n", matrixOutputFile), exit(0)) : fpt;
+	// Clean up MPI
+	MPI_Finalize();
+	/*==================================================================================================================================================*/
 
-    // Number of integers being written
-    fwrite(&matrixOneR, 1, sizeof(int), fpt);
-    fwrite(&matrixTwoC, 1, sizeof(int), fpt);
-
-    // Write n number of random integers
-    for (int a = 0; a < matrixOneR; a++)
-    {
-        for (int b = 0; b < matrixTwoC; b++)
-        {
-            fwrite(&product[a][b], sizeof(double), 1, fpt);
-        }
-    }
-
-    fclose(fpt);
-
-#pragma endregion
-
-    return 0;
-}
-
-/// <summary>
-/// Helper function to read in matrix data from specified file. This is to simplify repeated methods.
-/// </summary>
-/// <param name="file">File name for matrix data</param>
-/// <param name="row">Number of rows in matrix data file (param 1)</param>
-/// <param name="col">Number of cols in matrix data file (param 2)</param>
-/// <returns></returns>
-double** readMatrix(char* file, int* row, int* col)
-{
-    double buffer = 0.0;
-    FILE* fpt = fopen(file, "r"); fpt == NULL ? (fprintf(stderr, "Failed to open file %s\n", file), exit(0)) : fpt;
-    // Read in first two integers as row and column
-    fread(&(*row), 1, sizeof(int), fpt);
-    fread(&(*col), 1, sizeof(int), fpt);
-    double** data = (double**)malloc((*row) * sizeof(double*));
-    for (int i = 0; i < (*row); i++)
-    {
-        data[i] = (double*)malloc((*col) * sizeof(double));
-    }
-
-    // Read in all of the data
-    for (int a = 0; a < (*row); a++)
-    {
-        for (int b = 0; b < (*col); b++)
-        {
-            fread(&buffer, 1, sizeof(double), fpt);
-            data[a][b] = buffer;
-        }
-    }
-
-    fclose(fpt);
-
-    return data;
+	return(0);
 }
 
 /// <summary>

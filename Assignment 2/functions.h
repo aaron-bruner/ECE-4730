@@ -43,4 +43,5 @@ double** readMatrix(char* file, int *row, int *col);
 /*  mm-parallel.c */
 /*----------------*/
 #define SQR(x) ((x)*(x))
+#define ROOT 0
 int PerfectSquare(int n);
