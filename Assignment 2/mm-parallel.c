@@ -21,11 +21,12 @@
 int main(int argc, char* argv[])
 {
     char* matrixOneFile = NULL, * matrixTwoFile = NULL, * matrixOutputFile = NULL;
-	int rank, size;
-	int matrixOneCols, matrixOneRows, matrixTwoCols, matrixTwoRows, productRows, productCols, i, right, left, currentRow;
+	int matrixOneCols, matrixOneRows, matrixTwoCols, matrixTwoRows, rank, size;
+	int dims[] = { 0, 0 };
+	int period[] = { 1, 1 };
 	double** matrixOne, * matrixOneStorage;
 	double** matrixTwo, * matrixTwoStorage;
-	double* product, * outputMatrix;
+	MPI_Comm comm_cart;
 	MPI_Status status;
 	FILE* fpt;
 
@@ -56,27 +57,34 @@ int main(int argc, char* argv[])
 		return 0;
 	}
   
+	dims[0] = dims[1] = sqrt(size);
+	MPI_Cart_create(MPI_COMM_WORLD, 2, dims, period, 1, &comm_cart);
+
 	// Read in Matrix One
-	read_row_striped_matrix(matrixOneFile				/* IN - File name */
+	read_checkerboard_matrix(matrixOneFile				/* IN - File name */
 							,(void***)&matrixOne		/* OUT - 2D submatrix indices */
 							,(void**)&matrixOneStorage	/* OUT - Submatrix stored here */
 							,MPI_DOUBLE					/* IN - Matrix element type */
 							,&matrixOneRows				/* OUT - Matrix rows */
 							,&matrixOneCols				/* OUT - Matrix cols */
-							,MPI_COMM_WORLD);			/* IN - Communicator */
+							,comm_cart);				/* IN - Communicator */
 	// Read in Matrix Two
-	read_row_striped_matrix(matrixTwoFile				/* IN - File name */
+	read_checkerboard_matrix(matrixTwoFile				/* IN - File name */
 							,(void***)&matrixTwo		/* OUT - 2D submatrix indices */
 							,(void**)&matrixTwoStorage	/* OUT - Submatrix stored here */
 							,MPI_DOUBLE					/* IN - Matrix element type */
 							,&matrixTwoRows				/* OUT - Matrix rows */
 							,&matrixTwoCols				/* OUT - Matrix cols */
-							,MPI_COMM_WORLD);			/* IN - Communicator */
+							,comm_cart);				/* IN - Communicator */
 
-	if (rank == ROOT)
+	// Ensure that # of rows in matrix one equals number of columns in matrix two
+	if (matrixOneRows != matrixTwoCols)
 	{
-
+		fprintf(stdout, "Invalid matrix sizes... Matrix one rows (%d) must equal matrix two columns (%d)\n", matrixOneRows, matrixTwoCols);
+		return 0;
 	}
+
+
 	/*==================================================================================================================================================*/
 	// Free memory
 	free(matrixOne);
