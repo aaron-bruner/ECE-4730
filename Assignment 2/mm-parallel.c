@@ -55,10 +55,8 @@ int main(int argc, char* argv[])
 		if (rank == ROOT) fprintf(stdout, "Invalid number of processors (%d)...\n", size);
 		return 0;
 	}
-
-	right = rank + 1 == size ? 0 : rank + 1; // Find rank to the right
-	left = rank - 1 < 0 ? size-1 : rank - 1; // Find rank to the left
-    
+  
+	// Read in Matrix One
 	read_row_striped_matrix(matrixOneFile				/* IN - File name */
 							,(void***)&matrixOne		/* OUT - 2D submatrix indices */
 							,(void**)&matrixOneStorage	/* OUT - Submatrix stored here */
@@ -66,6 +64,7 @@ int main(int argc, char* argv[])
 							,&matrixOneRows				/* OUT - Matrix rows */
 							,&matrixOneCols				/* OUT - Matrix cols */
 							,MPI_COMM_WORLD);			/* IN - Communicator */
+	// Read in Matrix Two
 	read_row_striped_matrix(matrixTwoFile				/* IN - File name */
 							,(void***)&matrixTwo		/* OUT - 2D submatrix indices */
 							,(void**)&matrixTwoStorage	/* OUT - Submatrix stored here */
@@ -73,60 +72,13 @@ int main(int argc, char* argv[])
 							,&matrixTwoRows				/* OUT - Matrix rows */
 							,&matrixTwoCols				/* OUT - Matrix cols */
 							,MPI_COMM_WORLD);			/* IN - Communicator */
-	/*==================================================================================================================================================*/
-
-	productRows = BLOCK_SIZE(rank, size, matrixOneRows);	// Number of rows per processor based on matrix one
-	productCols = matrixTwoCols;							// Number of columns in product
-	currentRow = BLOCK_LOW(rank, size, matrixOneRows);		// What row each processor starts on
-	product = (double*)calloc(productRows * productCols * sizeof(MPI_DOUBLE), sizeof(MPI_DOUBLE)); // Allocate space for product per processor
-
-	for (int rover = 0; rover < size; rover++) // For each processor calculate the partial product
-	{
-		for (int processRow = 0; processRow < productRows; processRow++) // Number of rows for processor to process
-		{
-			/// We need to get the 2D coordinates based on the processor and what the last row we processed was
-			/// Using a 3x3 we can follow this logic:
-			/// 
-			/// processRow (x) = Number of rows per processor ( for a 4x4 matrix with 4 processors this would go to 1 | for 16x16 with 4 processors this would go to 4 )
-			/// r = Current row
-			/// c = Current Column
-			/// 
-			/// x=0 r=0 c=0    x=0 r=0 c=1    x=0 r=0 c=2    x=0 r=1 c=0    x=0 r=1 c=1 
-			///  X   2   3      1   X   3      1   2   X      1   2   3      1   2   3  
-			///  4   5   6  =>  4   5   6  =>  4   5   6  =>  X   5   6  =>  4   X   6  . . .
-			///  7   8   9      7   8   9      7   8   9      7   8   9      7   8   9  
-			/// 
-			/// x=1 r=1 c=0    x=1 r=1 c=1    x=1 r=1 c=2    x=1 r=2 c=0    x=1 r=2 c=1 
-			///  1   2   3      1   2   3      1   2   3      1   2   3      1   2   3  
-			///  X   5   6  =>  4   X   6  =>  4   5   X  =>  4   5   6  =>  4   5   6  . . .
-			///  7   8   9      7   8   9      7   8   9      X   8   9      7   X   9  
-			/// Following this algorithm we reference every values for each matrix and evenly distribute the rows among processors
-			for (int r = processRow * productCols + currentRow; r < processRow * productCols + (currentRow + productRows); r++) // Product Rows - Changes per process
-				for (int c = (r % productRows) * productCols; c < (r % productRows) * productCols + productCols; c++)			// Product Cols - Changes per process
-					product[processRow * productCols + (c % productCols)] += matrixOneStorage[r] * matrixTwoStorage[c];
-		}
-		MPI_Sendrecv(matrixTwoStorage, productRows * productCols, MPI_DOUBLE, left, 1,							/* SEND */
-					matrixTwoStorage, productRows * productCols, MPI_DOUBLE, right, 1, MPI_COMM_WORLD, &status);/* RECV */
-		currentRow = (currentRow + productRows) % matrixOneRows;
-	}
-
-	/*==================================================================================================================================================*/
-	// Output result to file (only if ROOT)
-	outputMatrix = (double*)malloc(matrixOneRows * matrixTwoCols * sizeof(double));
-	MPI_Gather(product, (productRows * productCols), MPI_DOUBLE, rank == ROOT ? outputMatrix : NULL, (productRows * productCols), MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
 	if (rank == ROOT)
 	{
-		fpt = fopen(matrixOutputFile, "w");
-		fwrite(&matrixOneRows, sizeof(int), 1, fpt);
-		fwrite(&matrixTwoCols, sizeof(int), 1, fpt);
-		fwrite(outputMatrix, sizeof(double), matrixOneRows * matrixTwoCols, fpt);
-		fclose(fpt);
+
 	}
 	/*==================================================================================================================================================*/
 	// Free memory
-	free(product);
-	free(outputMatrix);
 	free(matrixOne);
 	free(matrixOneStorage);
 	free(matrixTwo);
