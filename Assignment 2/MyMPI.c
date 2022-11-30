@@ -414,7 +414,7 @@ void read_row_striped_matrix (
    int          p;            /* Number of processes */
    void        *rptr;         /* Pointer into 'storage' */
    MPI_Status   status;       /* Result of receive */
-   int          x;            /* Result of read */
+   //int          x;            /* Result of read */
 
    MPI_Comm_size (comm, &p);
    MPI_Comm_rank (comm, &id);
@@ -459,12 +459,12 @@ void read_row_striped_matrix (
 
    if (id == (p-1)) {
       for (i = 0; i < p-1; i++) {
-         x = fread (*storage, datum_size,
+         fread (*storage, datum_size,
             BLOCK_SIZE(i,p,*m) * *n, infileptr);
          MPI_Send (*storage, BLOCK_SIZE(i,p,*m) * *n, dtype,
             i, DATA_MSG, comm);
       }
-      x = fread (*storage, datum_size, local_rows * *n,
+      fread (*storage, datum_size, local_rows * *n,
          infileptr);
       fclose (infileptr);
    } else
@@ -493,7 +493,7 @@ void read_block_vector (
    MPI_Status status;       /* Result of receive */
    int        id;           /* Process rank */
    int        p;            /* Number of processes */
-   int        x;            /* Result of read */
+   //int        x;            /* Result of read */
 
    datum_size = get_size (dtype);
    MPI_Comm_size(comm, &p);
@@ -525,12 +525,12 @@ void read_block_vector (
    *v = my_malloc (id, local_els * datum_size);
    if (id == (p-1)) {
       for (i = 0; i < p-1; i++) {
-         x = fread (*v, datum_size, BLOCK_SIZE(i,p,*n),
+         fread (*v, datum_size, BLOCK_SIZE(i,p,*n),
             infileptr);
          MPI_Send (*v, BLOCK_SIZE(i,p,*n), dtype, i, DATA_MSG,
             comm);
       }
-      x = fread (*v, datum_size, BLOCK_SIZE(id,p,*n),
+      fread (*v, datum_size, BLOCK_SIZE(id,p,*n),
              infileptr);
       fclose (infileptr);
    } else {
@@ -614,19 +614,36 @@ void print_submatrix (
 void print_subvector (
    void        *a,       /* IN - Array pointer */
    MPI_Datatype dtype,   /* IN - Array type */
-   int          n)       /* IN - Array size */
+   int          n,       /* IN - Array size */
+   FILE        *fpt)     /* IN - Output File Pointer */
 {
    int i;
+   double dbl = 0.0;
+   float flt = 0.0;
+   int iNt = 0;
 
    for (i = 0; i < n; i++) {
-      if (dtype == MPI_DOUBLE)
-         printf ("%6.3f ", ((double *)a)[i]);
-      else {
-         if (dtype == MPI_FLOAT)
-            printf ("%6.3f ", ((float *)a)[i]);
-         else if (dtype == MPI_INT)
-            printf ("%6d ", ((int *)a)[i]);
-      }
+       if (dtype == MPI_DOUBLE)
+       {
+           //printf ("%6.3f ", ((double *)a)[i]);
+           dbl = ((double*)a)[i];
+           fwrite(&dbl, sizeof(double), 1, fpt);
+       }
+       else 
+       {
+           if (dtype == MPI_FLOAT)
+           {
+               //printf ("%6.3f ", ((float *)a)[i]);
+               flt = ((float*)a)[i];
+               fwrite(&flt, sizeof(float), 1, fpt);
+           }
+           else if (dtype == MPI_INT)
+           {
+               //printf ("%6d ", ((int *)a)[i]);
+               iNt = ((int*)a)[i];
+               fwrite(&iNt, sizeof(int), 1, fpt);
+           }
+       }
    }
 }
 
@@ -637,6 +654,7 @@ void print_subvector (
  */
 
 void print_checkerboard_matrix (
+   char     *file,            /* IN -File to output to */
    void       **a,            /* IN -2D matrix */
    MPI_Datatype dtype,        /* IN -Matrix element type */
    int          m,            /* IN -Matrix rows */
@@ -658,6 +676,11 @@ void print_checkerboard_matrix (
    int        p;              /* Number of processes */
    int        src;            /* ID of proc with subrow */
    MPI_Status status;         /* Result of receive */
+   FILE      *fpt;            /* File we're printing matrix to*/
+
+   fpt = fopen(file, "w");
+   fwrite(&n, 1, sizeof(int), fpt);
+   fwrite(&n, 1, sizeof(int), fpt);
 
    MPI_Comm_rank (grid_comm, &grid_id);
    MPI_Comm_size (grid_comm, &p);
@@ -693,8 +716,8 @@ void print_checkerboard_matrix (
                      grid_comm, &status);
                }
             }
-            print_subvector (buffer, dtype, n);
-            putchar ('\n');
+            print_subvector (buffer, dtype, n, fpt);
+            //putchar ('\n');
          } else if (grid_coords[0] == i) {
             MPI_Send (a[j], local_cols, dtype, 0, 0,
                grid_comm);
@@ -703,8 +726,10 @@ void print_checkerboard_matrix (
    }
    if (!grid_id) {
       free (buffer);
-      putchar ('\n');
+      //putchar ('\n');
    }
+
+   fclose(fpt);
 }
 
 
@@ -741,7 +766,7 @@ void print_col_striped_matrix (
       MPI_Gatherv (a[i], BLOCK_SIZE(id,p,n), dtype, buffer,
          rec_count, rec_disp, dtype, 0, MPI_COMM_WORLD);
       if (!id) {
-         print_subvector (buffer, dtype, n);
+         //print_subvector (buffer, dtype, n);
          putchar ('\n');
       }
    }
@@ -840,7 +865,7 @@ void print_block_vector (
    datum_size = get_size (dtype);
 
    if (!id) {
-      print_subvector (v, dtype, BLOCK_SIZE(id,p,n));
+      //print_subvector (v, dtype, BLOCK_SIZE(id,p,n));
       if (p > 1) {
          tmp = my_malloc (id,BLOCK_SIZE(p-1,p,n)*datum_size);
          for (i = 1; i < p; i++) {
@@ -848,7 +873,7 @@ void print_block_vector (
                comm);
             MPI_Recv (tmp, BLOCK_SIZE(i,p,n), dtype, i,
                RESPONSE_MSG, comm, &status);
-            print_subvector (tmp, dtype, BLOCK_SIZE(i,p,n));
+            //print_subvector (tmp, dtype, BLOCK_SIZE(i,p,n));
          }
          free (tmp);
       }
@@ -878,7 +903,7 @@ void print_replicated_vector (
    MPI_Comm_rank (comm, &id);
    
    if (!id) {
-      print_subvector (v, dtype, n);
+      //print_subvector (v, dtype, n);
       printf ("\n\n");
    }
 }

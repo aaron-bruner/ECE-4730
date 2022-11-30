@@ -26,9 +26,11 @@ int main(int argc, char* argv[])
 	int period[] = { 1, 1 };
 	double** matrixOne, * matrixOneStorage;
 	double** matrixTwo, * matrixTwoStorage;
+	double** product, * productStorage;
 	MPI_Comm comm_cart;
+	int cart_rank, cart_size, left, right, up, down, N, srcRank, dstRank;
+	int coords[2];
 	MPI_Status status;
-	FILE* fpt;
 
 	/*==================================================================================================================================================*/
     // Handle CLA (Not supporting no provided file names since predefined files may not exist)
@@ -56,10 +58,12 @@ int main(int argc, char* argv[])
 		if (rank == ROOT) fprintf(stdout, "Invalid number of processors (%d)...\n", size);
 		return 0;
 	}
-  
-	dims[0] = dims[1] = sqrt(size);
-	MPI_Cart_create(MPI_COMM_WORLD, 2, dims, period, 1, &comm_cart);
 
+	// Set up the Cartesian topology
+	dims[0] = dims[1] = sqrt(size);
+	// Create the Cartesian topology with rank reordering enabled
+	MPI_Cart_create(MPI_COMM_WORLD, 2, dims, period, 1, &comm_cart);
+	/*==================================================================================================================================================*/
 	// Read in Matrix One
 	read_checkerboard_matrix(matrixOneFile				/* IN - File name */
 							,(void***)&matrixOne		/* OUT - 2D submatrix indices */
@@ -76,27 +80,67 @@ int main(int argc, char* argv[])
 							,&matrixTwoRows				/* OUT - Matrix rows */
 							,&matrixTwoCols				/* OUT - Matrix cols */
 							,comm_cart);				/* IN - Communicator */
-
+	/*==================================================================================================================================================*/
 	// Ensure that # of rows in matrix one equals number of columns in matrix two
-	if (matrixOneRows != matrixTwoCols)
+
+	// You may require the number of rows and columns of the matrices to be evenly
+	// divided by the square of the number of processors(which should be square).
+	fprintf(stdout, "[%d] Validating matrix sizes...\n", rank);
+	if (matrixOneRows != matrixOneCols || // Ensure Matrix One is Square
+		matrixTwoRows != matrixTwoCols || // Ensure Matrix Two is Square
+		matrixOneRows != matrixTwoCols || // Ensure Matrix One Rows matches Matrix Two Columns
+		matrixOneRows % (int)sqrt(size) != 0 // Ensure # of ROWS and COLS are evenly distributed
+		)								   // We only need to check one since they're square and equal
 	{
-		fprintf(stdout, "Invalid matrix sizes... Matrix one rows (%d) must equal matrix two columns (%d)\n", matrixOneRows, matrixTwoCols);
+		fprintf(stdout, "[%d] Invalid matrix sizes...\n", rank);
 		return 0;
 	}
+	/*==================================================================================================================================================*/
+	// N is the number of rows per processor. Since we require that the matrix me 
+	// square we don't have to worry about different rows and columns
+	N = matrixOneRows / dims[0];
 
+	// Create enough storage for the product array
+	fprintf(stdout, "[%d] Allocating space for product...\n", rank);
+	product        = malloc(N * sizeof(double*));
+	productStorage = calloc(SQR(N), sizeof(MPI_DOUBLE));
+	for (int i = 0; i < N; i++) product[i] = &productStorage[i * matrixTwoCols];
 
 	/*==================================================================================================================================================*/
-	// Free memory
-	free(matrixOne);
-	free(matrixOneStorage);
-	free(matrixTwo);
-	free(matrixTwoStorage);
+	// Get the rank, size and coordinates with respect to the new topology
+	fprintf(stdout, "[%d] Getting cart rank, size and coordinates...\n", rank);
+	MPI_Comm_rank(comm_cart, &cart_rank);
+	MPI_Comm_size(comm_cart, &cart_size);
+	MPI_Cart_coords(comm_cart, cart_rank, 2, coords);
 
-	// Clean up MPI
-	MPI_Finalize();
+	// Move rank reference up and left
+	fprintf(stdout, "[%d] Moving rank reference up and left...\n", rank);
+	MPI_Cart_shift(comm_cart, 1, -1, &right, &left);
+	MPI_Cart_shift(comm_cart, 0, -1, &down, &up);
+
+	// Next we need to align matrix A and matrix B
+	fprintf(stdout, "[%d] Aligning Matrix A and B\n", rank);
+	MPI_Cart_shift(comm_cart, 1, -coords[0], &srcRank, &dstRank);
+	MPI_Sendrecv_replace(matrixOneStorage, SQR(N), MPI_DOUBLE, dstRank, 1, srcRank, 1, comm_cart, &status);
+	MPI_Cart_shift(comm_cart, 0, -coords[1], &srcRank, &dstRank);
+	MPI_Sendrecv_replace(matrixTwoStorage, SQR(N), MPI_DOUBLE, dstRank, 1, srcRank, 1, comm_cart, &status);
+	/*==================================================================================================================================================*/
+	// Do the matrix multiplication sqrt(processors) number of times
+	fprintf(stdout, "[%d] Starting matrix multiplication...\n", rank);
+	for (int i = 0; i < (int)sqrt(size); i++)
+	{
+		fprintf(stdout, "\t[%d] i = %d", rank, i);
+		MatrixMultiply(N, matrixOne, matrixTwo, product); // Matrix Multiplication ( matrixOne x matrixTwo = product )
+		MPI_Sendrecv_replace(matrixOneStorage, SQR(N), MPI_DOUBLE, left, 1, right, 1, comm_cart, &status); // Shift LEFT
+		MPI_Sendrecv_replace(matrixTwoStorage, SQR(N), MPI_DOUBLE, up, 1, down, 1, comm_cart, &status);	   // Shift UP
+		fprintf(stdout, "\n");
+	}
+	/*==================================================================================================================================================*/
+	// Improved print_checkerboard_matrix to write to file instead of stdout
+	print_checkerboard_matrix(matrixOutputFile, (void**)product, MPI_DOUBLE, matrixOneRows, matrixTwoCols, comm_cart);
 	/*==================================================================================================================================================*/
 
-	return(0);
+	return 0;
 }
 
 /// <summary>
@@ -119,4 +163,28 @@ int PerfectSquare(int n)
         return t * t == n;
     }
     return 0;
+}
+
+/// <summary>
+/// This is a simple function that takes in two matrices and multiplies them 
+/// together and then stores the result in matrix C
+/// </summary>
+/// <param name="n">Number of ROWS/COLS for each matrix (ALL SQUARE)</param>
+/// <param name="a"></param>
+/// <param name="b"></param>
+/// <param name="c">Result Matrix</param>
+void MatrixMultiply(int n, double** a, double** b, double** c)
+{
+	int i, j, k;
+
+	for (i = 0; i < n; i++)
+	{
+		for (j = 0; j < n; j++)
+		{
+			for (k = 0; k < n; k++)
+			{
+				c[i][j] += a[i][k] * b[k][j];
+			}
+		}
+	}
 }

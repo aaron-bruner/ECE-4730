@@ -45,3 +45,4 @@ double** readMatrix(char* file, int *row, int *col);
 #define SQR(x) ((x)*(x))
 #define ROOT 0
 int PerfectSquare(int n);
+void MatrixMultiply(int n, double** a, double** b, double** c);

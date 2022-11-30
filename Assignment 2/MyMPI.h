@@ -53,7 +53,7 @@ void read_replicated_vector (char *, void **, MPI_Datatype,
 
 /****************** OUTPUT FUNCTIONS ***********************/
 
-void print_checkerboard_matrix (void **, MPI_Datatype, int,
+void print_checkerboard_matrix (char *, void **, MPI_Datatype, int,
         int, MPI_Comm);
 void print_col_striped_matrix (void **, MPI_Datatype, int,
         int, MPI_Comm);
