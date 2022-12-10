@@ -35,3 +35,8 @@
 /* print-matrix.c */
 /*----------------*/
 #define PRINT_HORIZONTAL_LINE(x) for (int __Z__ = 0; __Z__ < x; __Z__++) fprintf(stdout, "━");
+
+/*-------------------*/
+/* Jacobi-Parallel.c */
+/*-------------------*/
+#define ROOT 0

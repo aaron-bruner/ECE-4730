@@ -38,11 +38,9 @@ int main(int argc, char* argv[])
     //int c; fread(&c, 1, sizeof(int), fpt);
 
     // Print initial formatting which includes row and column count
-    PRINT_HORIZONTAL_LINE(20);
-    fprintf(stdout, "Matrix Data");
-    PRINT_HORIZONTAL_LINE(20);
-    fprintf(stdout, "Vector Size = %d", r);
-    PRINT_HORIZONTAL_LINE(20);
+    PRINT_HORIZONTAL_LINE(5);
+    fprintf(stdout, " Vector Size = %d ", r);
+    PRINT_HORIZONTAL_LINE(5);
     fprintf(stdout, "\n");
 
     // Print the integers until we hit end of file
@@ -50,7 +48,7 @@ int main(int argc, char* argv[])
     double x;
     while(fread(&x, 1, sizeof(double), fpt) != 0)
     {
-        fprintf(stdout, "% 17.6lf ", x);
+        fprintf(stdout, "%lf\n", x);
         //rover++;
         // If we've printed the number of columns then print a newline
         //rover % c == 0 ? fprintf(stdout, "\n") : false;

@@ -483,13 +483,13 @@ void read_block_vector (
     char        *s,      /* IN - File name */
     void       **v,      /* OUT - Subvector */
     MPI_Datatype dtype,  /* IN - Element type */
-    long long int         *n,      /* OUT - Vector length */
+    int         *n,      /* OUT - Vector length */
     MPI_Comm     comm)   /* IN - Communicator */
 {
    int        datum_size;   /* Bytes per element */
    int        i;
    FILE      *infileptr;    /* Input file pointer */
-   long long int        local_els;    /* Elements on this proc */
+   int        local_els;    /* Elements on this proc */
    MPI_Status status;       /* Result of receive */
    int        id;           /* Process rank */
    int        p;            /* Number of processes */

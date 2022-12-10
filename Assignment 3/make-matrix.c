@@ -79,8 +79,8 @@ int main(int argc, char* argv[])
 	{
 		for (int b = 0; b < c; b++)
 		{
-			//v = ((double)l + ((double)random() / (u - l))) / 1000.0;
-			v = u + ((double)random() / RAND_MAX) * (u - l);
+			v = ((double)l + ((double)random() / (u - l))) / 1000.0;
+			//v = u + ((double)random() / RAND_MAX) * (u - l);
 			a == b ? v *= 100 : v;
 			fwrite(&v, sizeof(double), 1, fpt);
 		}

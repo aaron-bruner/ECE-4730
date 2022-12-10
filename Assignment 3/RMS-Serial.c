@@ -18,8 +18,9 @@ int main(int argc, char* argv[])
     char* vectorBprimefile = NULL;
     int i = 0;
 
+    /**************************************************************************************************************/
     // Handle CLA
-    if (argc == 2)
+    if (argc == 3)
     {
         vectorBfile = strdup(argv[1]);
         vectorBprimefile = strdup(argv[2]);
@@ -29,7 +30,6 @@ int main(int argc, char* argv[])
         fprintf(stdout, "Incorrect number of arguments.\nUsage: RMS-Serial VectorB VectorBprime\n");
         abort();
     }
-
     /**************************************************************************************************************/
     fpt = fopen(vectorBfile, "r"); fpt == NULL ? (fprintf(stderr, "Failed to open file %s\n", vectorBfile), exit(0)) : fpt;
 
@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
     double* vectorB; vectorB = calloc(sizeof(double), vectorBn);
     double x;
     while (fread(&x, 1, sizeof(double), fpt) != 0)
-        vectorB[++i] = x;
+        vectorB[i++] = x;
 
     fclose(fpt);
     /**************************************************************************************************************/
@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
     double* vectorBprime; vectorBprime = calloc(sizeof(double), vectorBprimen);
     i = 0;
     while (fread(&x, 1, sizeof(double), fpt) != 0)
-        vectorBprime[++i] = x;
+        vectorBprime[i++] = x;
 
     fclose(fpt);
     /**************************************************************************************************************/

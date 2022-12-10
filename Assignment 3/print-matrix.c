@@ -39,9 +39,9 @@ int main(int argc, char* argv[])
 
     // Print initial formatting which includes row and column count
     PRINT_HORIZONTAL_LINE(20);
-    fprintf(stdout, "Matrix Data");
+    fprintf(stdout, " Matrix Data ");
     PRINT_HORIZONTAL_LINE(20);
-    fprintf(stdout, "Rows = %d AND Columns = %d", r, c);
+    fprintf(stdout, " Rows = %d AND Columns = %d ", r, c);
     PRINT_HORIZONTAL_LINE(20);
     fprintf(stdout, "\n");
 

@@ -4,7 +4,7 @@
     ajbrune
     C16480080
 
-    Description:
+    Description: This the serial version of the Jacobi method.
 
     Example Usage: Sequential-Iterative -d 100 MatrixA VectorX VectorB
  */
@@ -17,8 +17,9 @@ int main(int argc, char* argv[])
     char* MatrixAFile = NULL;
     char* VectorXFile = NULL;
     char* VectorBFile = NULL;
-    int x_opt, d = -1, i = 0;
+    int x_opt, d = -1, i = 0, rover, j, k;
 
+    /**************************************************************************************************************/
     // Handling multiple CLA
     while ((x_opt = getopt(argc, argv, "d:")) != -1)
     {
@@ -35,13 +36,17 @@ int main(int argc, char* argv[])
         }
     }
 
-    // If we didn't get the -d flag then exit
-    if (d == -1) exit(1);
-
-    MatrixAFile = argv[3];
-    VectorXFile = argv[4];
-    VectorBFile = argv[5];
-
+    if (argc == 6 && d != -1)
+    {
+        MatrixAFile = argv[3];
+        VectorXFile = argv[4];
+        VectorBFile = argv[5];
+    }
+    else
+    {
+        fprintf(stdout, "Incorrect number of arguments.\nUsage: Sequential-Iterative -d 100 MatrixA VectorX VectorB\n");
+        abort();
+    }
     /**************************************************************************************************************/
     fpt = fopen(MatrixAFile, "r"); fpt == NULL ? (fprintf(stderr, "Failed to open file %s\n", MatrixAFile), exit(0)) : fpt;
 
@@ -66,7 +71,9 @@ int main(int argc, char* argv[])
     fread(VectorB, sizeof(double), VectorBn, fpt);
     fclose(fpt);
     /**************************************************************************************************************/
-    /*
+    (MatrixAc != MatrixAr || MatrixAr != VectorBn || MatrixAc != VectorBn) ? fprintf(stdout, "Invalid matrix and vector size...\n"), exit(0) : false;
+    /**************************************************************************************************************/
+    /*      LECTURE 12
     Jacobi Method:
     a[0..n — 1, 0..n — 1] — coefficient matrix
     b[0..1] - constant vector
@@ -92,28 +99,28 @@ int main(int argc, char* argv[])
     endfor
     until values in x converge
     */
-    double* ptr;
-    double* x0 = calloc(sizeof(double), VectorBn);
+    double* x = calloc(sizeof(double), VectorBn);
     double* new = malloc(sizeof(double) * VectorBn);
-
     double sum = 0.0;
-    for (int rover = 0; rover < d; rover++)
+
+    for (rover = 0; rover < d; rover++)
     {
-        for (int j = 0; j < VectorBn; j++)
+        for (j = 0; j < VectorBn; j++)
         {
             sum = 0.0;
-            for (int k = 0; k < VectorBn; k++)
+            for (k = 0; k < VectorBn; k++)
             {
                 if (k != j)
                 {
-                    sum += MatrixA[j][k] * x0[k];
+                    sum += MatrixA[j][k] * x[k];
                 }
             }
             new[j] = (1 / MatrixA[j][j]) * (VectorB[j] - sum);
         }
-        ptr = x0;
-        x0 = new;
-        new = ptr;
+        for (j = 0; j < VectorBn; j++)
+        {
+            x[j] = new[j];
+        }
     }
     /**************************************************************************************************************/
     fpt = fopen(VectorXFile, "w"); fpt == NULL ? fprintf(stdout, "Failed to open file %s\n", VectorXFile), exit(0) : fpt;
@@ -122,10 +129,11 @@ int main(int argc, char* argv[])
     fwrite(&VectorBn, sizeof(int), 1, fpt);
     for (i = 0; i < VectorBn; i++) {
         //printf ("%6.3f ", ((double *)a)[i]);
-        dbl = ((double*)VectorB)[i];
+        dbl = ((double*)new)[i];
         fwrite(&dbl, sizeof(double), 1, fpt);
     }
     fclose(fpt);
+    /**************************************************************************************************************/
 
     return 0;
 }

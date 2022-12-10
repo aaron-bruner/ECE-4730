@@ -16,20 +16,22 @@ int main(int argc, char* argv[])
 	FILE* fpt;
 	char* MatrixAfile = NULL;
 	char* VectorXfile = NULL;
+	char* VectorBprimefile = NULL;
 	int i = 0, j = 0;
 
+	/**************************************************************************************************************/
 	// Handle CLA
 	if (argc == 4)
 	{
 		MatrixAfile = strdup(argv[1]);
 		VectorXfile = strdup(argv[2]);
+		VectorBprimefile = strdup(argv[3]);
 	}
 	else
 	{
 		fprintf(stdout, "Incorrect number of arguments.\nUsage: MatrixVector-Serial MatrixA VectorX VectorBprime\n");
 		abort();
 	}
-
 	/**************************************************************************************************************/
 	fpt = fopen(MatrixAfile, "r"); fpt == NULL ? (fprintf(stderr, "Failed to open file %s\n", MatrixAfile), exit(0)) : fpt;
 
@@ -70,9 +72,8 @@ int main(int argc, char* argv[])
 		}
 		//fprintf(stdout, "\n");
 	}
-
 	/**************************************************************************************************************/
-	fpt = fopen(argv[3], "w"); fpt == NULL ? fprintf(stdout, "Failed to open file %s\n", argv[3]), exit(0) : fpt;
+	fpt = fopen(VectorBprimefile, "w"); fpt == NULL ? fprintf(stdout, "Failed to open file %s\n", VectorBprimefile), exit(0) : fpt;
 	//print_subvector(VectorBprime, MPI_DOUBLE, VectorXn, fpt);
 	double dbl = 0.0;
 	fwrite(&VectorXn, sizeof(int), 1, fpt);
@@ -82,6 +83,7 @@ int main(int argc, char* argv[])
 		fwrite(&dbl, sizeof(double), 1, fpt);
 	}
 	fclose(fpt);
+	/**************************************************************************************************************/
 
 	return 0;
 }
