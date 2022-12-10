@@ -1,0 +1,56 @@
+100x100
+
+real	0m5.648s
+user	0m10.791s
+sys	0m9.135s
+500x500
+
+real	0m7.490s
+user	0m14.753s
+sys	0m13.066s
+1000x1000
+
+real	0m9.340s
+user	0m18.900s
+sys	0m16.188s
+1500x1500
+
+real	0m9.177s
+user	0m19.168s
+sys	0m15.302s
+2000x2000
+
+real	0m8.897s
+user	0m18.487s
+sys	0m14.956s
+3000x3000
+
+real	0m12.029s
+user	0m26.818s
+sys	0m19.066s
+5000x5000
+
+real	0m18.530s
+user	0m43.752s
+sys	0m28.002s
+10000x10000
+
+real	0m37.108s
+user	1m39.552s
+sys	0m45.907s
+ 
+ 
++------------------------------------------+ 
+| PALMETTO CLUSTER PBS RESOURCES REQUESTED | 
++------------------------------------------+ 
+ 
+mem=4gb,walltime=00:20:00,ncpus=8
+ 
+ 
++-------------------------------------+ 
+| PALMETTO CLUSTER PBS RESOURCES USED | 
++-------------------------------------+ 
+ 
+cput=00:07:02,mem=1244260kb,walltime=00:02:08,ncpus=8,cpupercent=25,vmem=3270676kb
+ 
+ 
