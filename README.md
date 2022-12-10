@@ -21,3 +21,15 @@ version, you will use a block decomposition so that each
 processor will find a partial sum of its portion of the file. Then, the final summation of
 the partial sums will be done using our the global_sum() function based on the technique
 given in the text and in class.
+
+###### Program 2 [Cannon's Algorithm]
+This is the serial and parallel Cannon’s versions of a standard O(n^3) Matrix Multiply.
+
+###### Program 3 [Iterative Equation Solver]
+Write a program, both a sequential and parallel version, that solves a system of n equations in n variables
+taking the form Ax = b. You will design it as follows:
+• Matrix and vector elements will be of type double,
+• Decomposition will be row-wise block,
+• A Jacibi iterative solver will be used,
+• Solve a dense matrix (no need to worry about sparse formats, etc.),
+• A fixed number of iterations is sufficient so we can compare speeds
